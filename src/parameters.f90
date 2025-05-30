@@ -8,9 +8,9 @@ module parameters
     integer(i4) :: sweeps=thermalization+eachsweep*Nmsrs
     integer(i4), parameter :: Mbins=10,bins=101
 
-    real(dp), parameter :: lambda0=0._dp!, dphi=0.5_dp, hotphi=2._dp*dphi
+    real(dp), parameter :: lambda0=1._dp!, dphi=0.5_dp, hotphi=2._dp*dphi
     real(dp) :: dphi=0.5_dp, hotphi=1.0_dp
-    real(dp), parameter :: maxx=1.2_dp, minn=-1.2_dp
+    real(dp), parameter :: maxx=1.5_dp, minn=-1.5_dp
     real(dp) :: binwidth=(maxx-minn)/real(bins,dp)
 
     real :: starting,ending

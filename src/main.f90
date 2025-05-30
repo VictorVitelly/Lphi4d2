@@ -17,7 +17,7 @@ program main
   !call thermalize(-1.4_dp)
 
   !Histogram
-  call make_histogram(1.0_dp)
+  call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
   !call vary_m0(-1.3_dp,-1.1_dp,50)
