@@ -10,6 +10,7 @@ set ytics font ',17'
 binwidth=3./101.
 bin(x,width)=width*floor(x/width)
 set boxwidth binwidth
+
 a=1
 sigma=1
 xmean=0.
