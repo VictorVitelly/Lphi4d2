@@ -99,7 +99,7 @@ contains
 
     do i=1,Nmsrs+tmax
       call montecarlo(m0,dphi,phi,ARR)
-      E(i)=S(m0,phi)/(N**2)
+      E(i)=S(m0,phi)/(real(N,dp)**2)
     end do
     call mean_0(E,E_ave)
 
@@ -128,8 +128,8 @@ contains
           end if
         end do
       end do
-      auto1j=auto1j/(real(Nmsrs,dp)-real(Nmsrs/Mbins,dp))
-      Ej=Ej/(real(Nmsrs,dp)-real(Nmsrs/Mbins,dp))
+      auto1j=auto1j/(real(Nmsrs,dp)-real(Nmsrs,dp)/real(Mbins,dp) )
+      Ej=Ej/(real(Nmsrs,dp)-real(Nmsrs,dp)/real(Mbins,dp) )
       jackk=0._dp
       do j=1,Mbins
         autoj=0._dp
@@ -137,9 +137,9 @@ contains
         jackk=jackk+(autoj-auto )**2
       end do
       auto_delta=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp) )
-      deallocate(auto1j,Ej)
 
       write(70,*) tt, auto, auto_delta
+      deallocate(auto1j,Ej)
     end do
     close(70)
   end subroutine autocorrelation

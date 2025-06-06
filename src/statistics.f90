@@ -62,6 +62,30 @@ contains
     AR=AR/real(Narr**2,dp)
   end subroutine montecarlo
 
+  subroutine metropolis(m0,phi)
+    real(dp), intent(in) :: m0
+    real(dp), dimension(:,:), intent(inout) :: phi
+    real(dp) :: deltaphi,phi2,DS,r,p
+    integer(i4) :: i1,i2,Narr
+    Narr=size(phi,dim=1)
+    do i1=1,Narr
+      do i2=1,Narr
+        call random_phi(deltaphi,dphi_m)
+        phi2=phi(i1,i2)+deltaphi
+        DS=DeltaS(m0,phi,i1,i2,phi2)
+        if(DS .le. 0._dp) then
+          phi(i1,i2)=phi2
+        else
+          call random_number(r)
+          p=Exp(-DS)
+          if(r < p ) then
+            phi(i1,i2)=phi2
+          end if
+        end if
+      end do
+    end do
+  end subroutine metropolis
+
   subroutine flip_sign(phi,i)
     real(dp), dimension(:,:), intent(inout) :: phi
     integer(i4), intent(in) :: i

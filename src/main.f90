@@ -11,13 +11,13 @@ program main
   call cpu_time(starting)
 
   !Only measure the acc. rate, must modify dphi
-  !call acceptance_rate(-1.5_dp)
+  call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
   !call thermalize(-1.4_dp)
 
   !Histogram
-  call make_histogram(-1.4_dp)
+  !call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
   !call vary_m0(-1.3_dp,-1.1_dp,50)
@@ -37,15 +37,17 @@ contains
   real(dp) :: ARR
   open(10, file = 'data/history.dat', status = 'replace')
   allocate(phi(N,N))
-  !call hot_start(phi,hotphi)
-  call cold_start(phi)
+  call hot_start(phi,hotphi)
+  !call cold_start(phi)
   do i=1,5*thermalization
-    call montecarlo(m0,dphi,phi,ARR)
+    !50 sweeps for L=8, 500 sweeps for L=64
     if(i==1 .or. mod(i,100)==0) then
       write(10,*) i,",", S(m0,phi)/real(N**2,dp)
     end if
+    call montecarlo(m0,dphi,phi,ARR)
+    !call metropolis(m0,phi)
   end do
-  call autocorrelation(m0,200,phi)
+  !call autocorrelation(m0,150,phi)
   close(10)
   deallocate(phi)
   end subroutine thermalize
@@ -55,12 +57,22 @@ contains
   real(dp), intent(in) :: m0
   real(dp) :: ARR,AR_ave,AR_delta
   real(dp), dimension(Nmsrs) :: AR
+  !real(dp),dimension(200,20) :: hist
   integer(i4) :: i,k,j
-  do j=1,19
+  open(10, file = 'data/history.dat', status = 'replace')
+  !do j=1,19
     k=0
     allocate(phi(N,N))
-    call cold_start(phi)
-    !call hot_start(phi,hotphi)
+    !call cold_start(phi)
+    call hot_start(phi,hotphi)
+    do i=1,5*thermalization
+      if(i==1 .or. mod(i,400)==0) then
+        write(10,*) i,",", S(m0,phi)/real(N**2,dp)
+      end if
+      call montecarlo(m0,dphi,phi,ARR)
+    !call metropolis(m0,phi)
+    end do
+
     AR=0._dp
     do i=1,sweeps
       call montecarlo(m0,dphi,phi,ARR)
@@ -71,11 +83,12 @@ contains
       call flip_sign(phi,i)
     end do
     call mean_scalar(AR,AR_ave,AR_delta)
-    write(*,*) AR_ave,",", AR_delta
+    write(*,*) dphi, ",", AR_ave,",", AR_delta
     deallocate(phi)
-    dphi=dphi+0.1_dp/2._dp
-    hotphi=2._dp*dphi
-  end do
+    !dphi=dphi+0.1_dp/2._dp
+    !hotphi=2._dp*dphi
+  !end do
+  close(10)
   end subroutine acceptance_rate
 
   subroutine vary_m0(mi,mf,Nms)
