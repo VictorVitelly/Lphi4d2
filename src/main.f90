@@ -11,10 +11,10 @@ program main
   call cpu_time(starting)
 
   !Only measure the acc. rate, must modify dphi
-  call acceptance_rate(-1.2_dp)
+  !call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
-  !call thermalize(-1.4_dp)
+  call thermalize(-1.0_dp)
 
   !Histogram
   !call make_histogram(-1.4_dp)
@@ -34,20 +34,18 @@ contains
   real(dp), intent(in) :: m0
   real(dp), allocatable :: phi(:,:)
   integer(i4) :: i
-  real(dp) :: ARR
   open(10, file = 'data/history.dat', status = 'replace')
   allocate(phi(N,N))
   call hot_start(phi,hotphi)
   !call cold_start(phi)
-  do i=1,5*thermalization
+  do i=1,2*thermalization
     !50 sweeps for L=8, 500 sweeps for L=64
-    if(i==1 .or. mod(i,100)==0) then
-      write(10,*) i,",", S(m0,phi)/real(N**2,dp)
-    end if
-    call montecarlo(m0,dphi,phi,ARR)
-    !call metropolis(m0,phi)
+    !if(i==1 .or. mod(i,500)==0) then
+    !  write(10,*) i,",", S(m0,phi)/real(N**2,dp)
+    !end if
+    call metropolis(m0,phi)
   end do
-  !call autocorrelation(m0,150,phi)
+  call autocorrelation2(m0,401,phi)
   close(10)
   deallocate(phi)
   end subroutine thermalize
@@ -57,22 +55,24 @@ contains
   real(dp), intent(in) :: m0
   real(dp) :: ARR,AR_ave,AR_delta
   real(dp), dimension(Nmsrs) :: AR
-  !real(dp),dimension(200,20) :: hist
-  integer(i4) :: i,k,j
+  real(dp),dimension(201,10) :: hist
+  integer(i4) :: i,k,k2,j
   open(10, file = 'data/history.dat', status = 'replace')
-  !do j=1,19
-    k=0
+  do j=1,10
+
+    k2=0
     allocate(phi(N,N))
-    !call cold_start(phi)
-    call hot_start(phi,hotphi)
+    call cold_start(phi)
+    !call hot_start(phi,hotphi)
     do i=1,5*thermalization
-      if(i==1 .or. mod(i,400)==0) then
-        write(10,*) i,",", S(m0,phi)/real(N**2,dp)
+      if(i==1 .or. mod(i,500)==0) then
+        k2=k2+1
+        hist(k2,j)=S(m0,phi)/real(N**2,dp)
       end if
       call montecarlo(m0,dphi,phi,ARR)
-    !call metropolis(m0,phi)
     end do
 
+    k=0
     AR=0._dp
     do i=1,sweeps
       call montecarlo(m0,dphi,phi,ARR)
@@ -85,9 +85,19 @@ contains
     call mean_scalar(AR,AR_ave,AR_delta)
     write(*,*) dphi, ",", AR_ave,",", AR_delta
     deallocate(phi)
-    !dphi=dphi+0.1_dp/2._dp
-    !hotphi=2._dp*dphi
-  !end do
+    dphi=dphi+0.1_dp
+    hotphi=2._dp*dphi
+
+  end do
+
+  k2=0
+  do i=1,5*thermalization
+    if(i==1 .or. mod(i,500)==0) then
+      k2=k2+1
+      write(10,*) i, hist(k2,:)
+    end if
+  end do
+
   close(10)
   end subroutine acceptance_rate
 

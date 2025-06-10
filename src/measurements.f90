@@ -144,4 +144,62 @@ contains
     close(70)
   end subroutine autocorrelation
 
+
+  subroutine autocorrelation2(m0,tmax,phi)
+    integer(i4), intent(in) :: tmax
+    real(dp), intent(in) :: m0
+    real(dp), dimension(N,N), intent(inout) :: phi
+    integer(i4) :: i,j,tt
+    real(dp) :: E(tmax), auto1(tmax,Nmsrs),auto2(Nmsrs)
+    real(dp) :: auto1_ave(tmax),auto2_ave, auto(tmax)
+    real(dp) :: auto1bin(tmax,Mbins),auto2bin(Mbins)
+    real(dp) :: autoc(tmax), jackk(tmax), auto_delta(tmax)
+    real(dp) :: Nbins
+    open(70, file = 'data/autocorr.dat', status = 'replace')
+    Nbins=real(Nmsrs,dp)-real(Nmsrs,dp)/real(Mbins,dp)
+
+    do j=1,Nmsrs
+      do i=1,tmax
+        call metropolis(m0,phi)
+        E(i)=S(m0,phi)/(real(N,dp)**2)
+      end do
+      do tt=0,tmax-1
+        auto1(tt+1,j)=E(1)*E(1+tt)
+      end do
+      call mean_0(E(:),auto2(j) )
+    end do
+    do tt=0,tmax-1
+      call mean_0(auto1(tt+1,:),auto1_ave(tt+1) )
+    end do
+    call mean_0(auto2(:),auto2_ave )
+    auto(:)=auto1_ave(:)-(auto2_ave**2)
+
+    auto1bin=0._dp
+    auto2bin=0._dp
+    do j=1,Mbins
+      do i=1,Nmsrs
+        if(i .le. (j-1)*Nmsrs/Mbins) then
+          auto1bin(:,j)=auto1bin(:,j)+auto1(:,i)
+          auto2bin(j)=auto2bin(j)+auto2(i)
+        else if(i > j*Nmsrs/Mbins) then
+          auto1bin(:,j)=auto1bin(:,j)+auto1(:,i)
+          auto2bin(j)=auto2bin(j)+auto2(i)
+        end if
+      end do
+    end do
+    auto1bin(:,:)=auto1bin(:,:)/(Nbins )
+    auto2bin(:)=auto2bin(:)/(Nbins )
+    jackk=0._dp
+    do j=1,Mbins
+      autoc(:)=auto1bin(:,j)-(auto2bin(j)**2)
+      jackk(:)=jackk(:)+(autoc(:)-auto(:) )**2
+    end do
+    auto_delta(:)=Sqrt(real(Mbins-1,dp)*jackk(:)/real(Mbins,dp) )
+
+    do tt=0,tmax-1
+      write(70,*) tt,auto(tt+1),auto_delta(tt+1)
+    end do
+    close(70)
+  end subroutine autocorrelation2
+
 end module measurements
