@@ -14,7 +14,7 @@ program main
   !call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
-  call thermalize(-1.0_dp)
+  call thermalize(-1.3_dp)
 
   !Histogram
   !call make_histogram(-1.4_dp)
@@ -45,11 +45,12 @@ contains
     !end if
     call metropolis(m0,phi)
   end do
-  call autocorrelation2(m0,401,phi)
+  call autocorrelation(m0,301,phi)
   close(10)
   deallocate(phi)
   end subroutine thermalize
 
+  !Measure acceptance rate for different DeltaPhi, recommended start at dphi=0.1
   subroutine acceptance_rate(m0)
   real(dp), allocatable :: phi(:,:)
   real(dp), intent(in) :: m0
@@ -59,7 +60,6 @@ contains
   integer(i4) :: i,k,k2,j
   open(10, file = 'data/history.dat', status = 'replace')
   do j=1,10
-
     k2=0
     allocate(phi(N,N))
     call cold_start(phi)
@@ -71,7 +71,6 @@ contains
       end if
       call montecarlo(m0,dphi,phi,ARR)
     end do
-
     k=0
     AR=0._dp
     do i=1,sweeps
@@ -87,9 +86,7 @@ contains
     deallocate(phi)
     dphi=dphi+0.1_dp
     hotphi=2._dp*dphi
-
   end do
-
   k2=0
   do i=1,5*thermalization
     if(i==1 .or. mod(i,500)==0) then
@@ -97,58 +94,8 @@ contains
       write(10,*) i, hist(k2,:)
     end if
   end do
-
   close(10)
   end subroutine acceptance_rate
-
-  subroutine vary_m0(mi,mf,Nms)
-  real(dp), intent(in) :: mi,mf
-  integer(i4), intent(in) :: Nms
-  real(dp), allocatable :: phi(:,:)
-  real(dp) :: M,m0,ARR,M_ave,M_delta!,S_ave,S_delta
-  real(dp) :: susc_ave,susc_delta!,heat_ave,heat_delta
-  real(dp), dimension(Nmsrs) :: susc1,susc2!,heat1,heat2,Sprom
-  integer(i4) :: i,j,k
-  open(10, file = 'data/action.dat', status = 'replace')
-  open(20, file = 'data/magnetization.dat', status = 'replace')
-  open(30, file = 'data/susceptibility.dat', status = 'replace')
-  !open(40, file = 'data/heat.dat', status = 'replace')
-
-  do j=1,Nms
-    m0=mi+(mf-mi)*real(j-1,dp)/real(Nms-1,dp)
-    k=0
-    allocate(phi(N,N))
-    !call cold_start(phi)
-    call hot_start(phi,hotphi)
-    call initialize1(susc1,susc2)
-
-    do i=1,sweeps
-      call montecarlo(m0,dphi,phi,ARR)
-      if(i>thermalization .and. mod(i,eachsweep)==0) then
-        k=k+1
-        !Sprom(k)=S(m0,phi)
-        M=mean(phi)
-        call measure2(M,susc1(k),susc2(k))
-      end if
-      call flip_sign(phi,i)
-    end do
-
-    !call mean_scalar(Sprom,S_ave,S_delta)
-    call mean_scalar(susc2,M_ave,M_delta)
-    !call heat_jackk(heat1,heat2,heat_ave,heat_delta)
-    call heat_jackk(susc1,susc2,susc_ave,susc_delta)
-
-    !write(10,*) m0, S_ave/real(N**2,dp), S_delta/real(N**2,dp)
-    write(20,*) m0, M_ave/real(N**2,dp), M_delta/real(N**2,dp)
-    write(30,*) m0,",", susc_ave/real(N**2,dp),",", susc_delta/real(N**2,dp)
-   ! write(40,*) m0, heat_ave/real(N**2,dp), heat_delta/real(N**2,dp)
-    deallocate(phi)
-  end do
-  close(10)
-  close(20)
-  close(30)
-  close(40)
-  end subroutine vary_m0
 
   subroutine make_histogram(m0)
   real(dp), intent(in) :: m0
@@ -223,5 +170,96 @@ contains
   deallocate(phi)
   close(60)
   end subroutine correlate
+  
+ subroutine vary_m0(mi,mf,Nts)
+  real(dp), intent(in) :: mi,mf
+  integer(i4), intent(in) :: Nts
+  real(dp), dimension(N,N) :: phi
+  integer(i4) :: i,j,k
+  real(dp), dimension(Nmsrs2) :: E,M,suscep,heat,U4
+  real(dp) :: T,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
+  real(dp) :: suscep_ave,suscep_delta,heat_ave,heat_delta,U4_ave,U4_delta
+  !real(dp) :: ARR,ar(Nmsrs2),ar_ave,ar_delta
+  !real(dp) :: csx,csx2,cs(Nmsrs2),cs2(Nmsrs2),cs_ave,cs_delta,cs2_ave,cs2_delta
+  open(10, file = 'data/action.dat', status = 'replace')
+  open(20, file = 'data/magnetization.dat', status = 'replace')
+  open(30, file = 'data/susceptibility.dat', status = 'replace')
+  open(40, file = 'data/heat.dat', status = 'replace')
+  open(50, file = 'data/binder.dat', status = 'replace')
+  !open(60, file = 'data/rank.dat', status = 'replace')
+  !open(70, file = 'data/rank2.dat', status = 'replace')
+  !open(80, file = 'data/accrate.dat', status = 'replace')
+  norm=real(Nmsrs,dp)
+  vol=real(N**2,dp)
+  do k=1,Nts
+  write(*,*) k
+  call cold_start(phi)
+    m0=mi+(mf-mi)*real(k-1,dp)/real(Nts-1)
+    E(:)=0._dp
+    M(:)=0._dp
+    !cs(:)=0._dp
+    !cs2(:)=0._dp
+    !ar(:)=0._dp
+    do j=1,Nmsrs2
+      E2=0._dp
+      M2=0._dp
+      M4=0._dp
+      do i=1,sweeps
+        if(i>thermalization .and. mod(i,eachsweep)==0 ) then
+          MM=Magnet(phi)
+          EE=S(m0,phi)
+          E(j)=E(j)+EE
+          M(j)=M(j)+abs(MM)
+          E2=E2+EE**2
+          M2=M2+MM**2
+          M4=M4+MM**4
+          !cs(j)=cs(j)+csx
+          !cs2(j)=cs2(j)+csx2
+          !ar(j)=ar(j)+ARR
+        end if
+        call metropolis(m0,phi)
+        !call montecarlo(m0,dphi,phi,ARR)
+        !call cluster(spint,T)
+        !call cluster2(spin,T,csx,csx2)
+      end do
+      E(j)=E(j)/norm
+      M(j)=M(j)/norm
+      E2=E2/norm
+      M2=M2/norm
+      M4=M4/norm
+      suscep(j)=M2-M(j)**2
+      heat(j)=E2-E(j)**2
+      U4(j)=1._dp-M4/(3._dp*M2**2)
+      !cs(j)=cs(j)/norm
+      !cs2(j)=cs2(j)/norm
+      !ar(j)=ar(j)/norm
+    end do
+    call mean_scalar(E,E_ave,E_delta)
+    call mean_scalar(M,M_ave,M_delta)
+    call mean_scalar(suscep,suscep_ave,suscep_delta)
+    call mean_scalar(heat,heat_ave,heat_delta)
+    call mean_scalar(U4,U4_ave,U4_delta)
+    !call mean_scalar(cs,cs_ave,cs_delta)
+    !call mean_scalar(cs2,cs2_ave,cs2_delta)
+    !call mean_scalar(ar,ar_ave,ar_delta)
+    write(10,*) m0, E_ave/vol, E_delta/vol
+    write(20,*) m0, M_ave/vol, M_delta/vol
+    write(30,*) m0, suscep_ave/vol, suscep_delta/vol
+    write(40,*) m0, heat_ave/vol, heat_delta/vol
+    write(50,*) m0, U4_ave, U4_delta
+    !write(60,*) m0, cs_ave,cs_delta
+    !write(70,*) m0, cs2_ave/(vol**2), cs2_delta/(vol**2)
+    !write(80,*) m0, ar_ave, ar_delta
+  end do
+  
+  close(10)
+  close(20)
+  close(30)
+  close(40)
+  close(50)
+  !close(60)
+  !close(70)
+  !close(80)
+  end subroutine vary_m0
 
 end program main

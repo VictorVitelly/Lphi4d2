@@ -21,12 +21,11 @@ contains
   end subroutine cold_start
 
   subroutine hot_start(phi,hotphi)
-    real(dp), dimension(:,:), intent(out) :: phi
+    real(dp), dimension(N,N), intent(out) :: phi
     real(dp), intent(in) :: hotphi
-    integer(i4) :: i1,i2,Narr
-    Narr=size(phi,dim=1)
-    do i1=1,Narr
-      do i2=1,Narr
+    integer(i4) :: i1,i2
+    do i1=1,N
+      do i2=1,N
         call random_phi(phi(i1,i2),hotphi)
       end do
     end do
@@ -34,14 +33,13 @@ contains
 
   subroutine montecarlo(m0,dphi,phi,AR)
     real(dp), intent(in) :: m0,dphi
-    real(dp), dimension(:,:), intent(inout) :: phi
+    real(dp), dimension(N,N), intent(inout) :: phi
     real(dp), intent(out) :: AR
     real(dp) :: deltaphi,phi2,DS,r,p
-    integer(i4) :: i1,i2,Narr
-    Narr=size(phi,dim=1)
+    integer(i4) :: i1,i2
     AR=0._dp
-    do i1=1,Narr
-      do i2=1,Narr
+    do i1=1,N
+      do i2=1,N
         call random_phi(deltaphi,dphi)
         phi2=phi(i1,i2)+deltaphi
         DS=DeltaS(m0,phi,i1,i2,phi2)
@@ -59,17 +57,16 @@ contains
         end if
       end do
     end do
-    AR=AR/real(Narr**2,dp)
+    AR=AR/real(N**2,dp)
   end subroutine montecarlo
 
   subroutine metropolis(m0,phi)
     real(dp), intent(in) :: m0
-    real(dp), dimension(:,:), intent(inout) :: phi
+    real(dp), dimension(N,N), intent(inout) :: phi
     real(dp) :: deltaphi,phi2,DS,r,p
-    integer(i4) :: i1,i2,Narr
-    Narr=size(phi,dim=1)
-    do i1=1,Narr
-      do i2=1,Narr
+    integer(i4) :: i1,i2
+    do i1=1,N
+      do i2=1,N
         call random_phi(deltaphi,dphi_m)
         phi2=phi(i1,i2)+deltaphi
         DS=DeltaS(m0,phi,i1,i2,phi2)
@@ -87,13 +84,12 @@ contains
   end subroutine metropolis
 
   subroutine flip_sign(phi,i)
-    real(dp), dimension(:,:), intent(inout) :: phi
+    real(dp), dimension(N,N), intent(inout) :: phi
     integer(i4), intent(in) :: i
-    integer(i4) :: i1,i2,Narr
+    integer(i4) :: i1,i2
     if(i>thermalization .and. mod(i,10)==0) then
-      Narr=size(phi,dim=1)
-      do i1=1,Narr
-        do i2=1,Narr
+      do i1=1,N
+        do i2=1,N
           phi(i1,i2)=-phi(i1,i2)
         end do
       end do
@@ -130,6 +126,38 @@ contains
       end do
       deltay=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
   end subroutine jackknife
+  
+  subroutine jackknife2(x,y,deltay)
+    real(dp), dimension(:), intent(in) :: x
+    real(dp), intent(in) :: y
+    real(dp), intent(out) :: deltay
+    real(dp) :: jackk
+    real(dp), allocatable :: xmean(:), delta_y(:)
+    integer(i4) :: k,Narr,i,j
+      Narr=size(x)
+      allocate(delta_y(size(Mbin)))
+      do j=1,size(Mbin)
+        allocate(xmean(Mbin(j)))
+        jackk=0._dp
+        xmean=0._dp
+        do i=1,Mbin(j)
+          do k=1,Narr
+            if(k .le. (i-1)*Narr/Mbin(j)) then
+              xmean(i)=xmean(i)+x(k)
+            else if(k > i*Narr/Mbin(j)) then
+              xmean(i)=xmean(i)+x(k)
+            end if
+          end do
+          xmean(i)=xmean(i)/(real(Narr,dp) -real(Narr/Mbin(j),dp))
+        end do
+        do k=1,Mbin(j)
+          jackk=jackk+(xmean(k)-y )**2
+        end do
+        delta_y(j)=Sqrt(real(Mbin(j)-1,dp)*jackk/real(Mbin(j),dp))
+        deallocate(xmean)
+      end do
+      deltay=maxval(delta_y)
+  end subroutine jackknife2
 
   subroutine standard_error(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
