@@ -7,20 +7,26 @@ program main
   use statistics
   use measurements
   implicit none
-
+  integer(i4) kkkk
+  
+  write(*,*) 'How many Metropolis per cycle?' 
+  read(*,*) kkkk
+  write(*,*) 'Correctly read k=',kkkk
+  
   call cpu_time(starting)
-
+  
   !Only measure the acc. rate, must modify dphi
   !call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
-  call thermalize(-1.3_dp)
+  !call thermalize(-1.25_dp,kkkk)
+  call time_test(-1.25_dp,kkkk)
 
   !Histogram
   !call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
-  !call vary_m0(-1.3_dp,-1.1_dp,50)
+  !call vary_m0(-2.0_dp,-0.0_dp,30)
 
   !Measure correlation function
   !call correlate(-2.5_dp)
@@ -30,8 +36,9 @@ program main
 
 contains
 
-  subroutine thermalize(m0)
+  subroutine thermalize(m0,montecarlos)
   real(dp), intent(in) :: m0
+  integer(i4),intent(in) :: montecarlos
   real(dp), allocatable :: phi(:,:)
   integer(i4) :: i
   open(10, file = 'data/history.dat', status = 'replace')
@@ -45,7 +52,7 @@ contains
     !end if
     call metropolis(m0,phi)
   end do
-  call autocorrelation(m0,301,phi)
+  call autocorrelation(m0,201,phi,montecarlos)
   close(10)
   deallocate(phi)
   end subroutine thermalize
@@ -139,34 +146,40 @@ contains
 
   subroutine correlate(m0)
   real(dp), intent(in) :: m0
-  real(dp), allocatable :: phi(:,:), corr1(:,:), corr2(:,:,:), CF(:,:), CFprom(:,:)
-  real(dp) :: ARR
-  integer(i4) :: i,k
+  real(dp), allocatable :: phi(:,:),corr1(:),corr2(:,:),CF(:,:),CF_ave(:),CF_delta(:)
+  integer(i4) :: i,j
   open(60, file = 'data/corrfunc.dat', status = 'replace')
   allocate(phi(N,N))
-  allocate(corr1(N,Nmsrs))
-  allocate(corr2(N,N,Nmsrs))
-  allocate(CF(N,N))
-  allocate(CFprom(N,N))
+  allocate(corr1(N))
+  allocate(corr2(N,N))
+  allocate(CF(N,Nmsrs2))
+  allocate(CF_ave(N))
+  allocate(CF_delta(N))
 
   !call cold_start(phi)
   call hot_start(phi,hotphi)
-  k=0
-  do i=1,sweeps
-    call montecarlo(m0,dphi,phi,ARR)
-    if(i>thermalization .and. mod(i,eachsweep)==0) then
-      k=k+1
-      call correlation(phi,k,corr1,corr2)
-      call flip_sign(phi,i)
-    end if
+  do j=1,Nmsrs2
+    corr1(:)=0._dp
+    corr2(:,:)=0._dp
+    do i=1,sweeps
+      call metropolis(m0,phi)
+      if(i>thermalization .and. mod(i,eachsweep)==0) then
+        call correlation(phi,corr1,corr2)
+      end if
+    end do
+    corr1(:)=corr1(:)/real(Nmsrs,dp)
+    corr2(:,:)=corr2(:,:)/real(Nmsrs,dp)
+    do i=1,N
+        CF(i,j)=corr2(i,1)-corr1(i)*corr1(1)
+    end do
   end do
 
-  call correlation_function(corr1,corr2,CF,CFprom)
+  call mean_vector(CF,CF_ave,CF_delta)
   do i=1,N+1
-    write(60,*) abs(i-1), CF(iv(i),1), CFprom(iv(i),1)
+    write(60,*) abs(i-1), CF_ave(iv(i)), CF_delta(iv(i))
   end do
 
-  deallocate(corr1,corr2,CF,CFprom)
+  deallocate(corr1,corr2,CF,CF_ave,CF_delta)
   deallocate(phi)
   close(60)
   end subroutine correlate
@@ -177,7 +190,7 @@ contains
   real(dp), dimension(N,N) :: phi
   integer(i4) :: i,j,k
   real(dp), dimension(Nmsrs2) :: E,M,suscep,heat,U4
-  real(dp) :: T,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
+  real(dp) :: m0,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
   real(dp) :: suscep_ave,suscep_delta,heat_ave,heat_delta,U4_ave,U4_delta
   !real(dp) :: ARR,ar(Nmsrs2),ar_ave,ar_delta
   !real(dp) :: csx,csx2,cs(Nmsrs2),cs2(Nmsrs2),cs_ave,cs_delta,cs2_ave,cs2_delta
@@ -261,5 +274,24 @@ contains
   !close(70)
   !close(80)
   end subroutine vary_m0
+  
+  subroutine time_test(m0,montecarlos)
+  integer(i4), intent(in) :: montecarlos
+  real(dp), intent(in) :: m0
+  integer(i4) :: i,j
+  real(dp) :: ti,tf,time_ave,time_delta
+  real(dp) :: phi(N,N),time(120)
+  call cold_start(phi)
+  do j=1,120
+    call cpu_time(ti)
+    do i=1,100000
+      call cycles(m0,phi,montecarlos)
+    end do
+    call cpu_time(tf)
+    time(j)=tf-ti
+  end do
+  call mean_scalar(time,time_ave,time_delta)
+  write(*,*) time_ave, time_delta
+  end subroutine time_test
 
 end program main

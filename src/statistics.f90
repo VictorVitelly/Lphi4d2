@@ -96,8 +96,7 @@ contains
     end if
   end subroutine flip_sign
   
-  subroutine cluster(m0,phi) 
-    real(dp),intent(in) :: m0
+  subroutine cluster(phi) 
     real(dp), dimension(N,N),intent(inout) :: phi
     integer(i4), dimension(N,N) :: spin
     logical, dimension(N,N) :: bond_x,bond_y
@@ -193,40 +192,25 @@ contains
     deallocate(flip_cluster)
     
   end subroutine cluster
+  
+  subroutine cycles(m0,phi,k)
+    real(dp), intent(in) :: m0
+    real(dp), dimension(N,N), intent(inout) :: phi
+    integer(i4), intent(in) :: k
+    integer(i4) :: i
+    do i=1,k
+      call metropolis(m0,phi)
+    end do
+    call cluster(phi)
+  end subroutine cycles
 
 
   !Statistics for measurements
   !
   !
   !
-  subroutine jackknife(x,y,deltay)
-    real(dp), dimension(:), intent(in) :: x
-    real(dp), intent(in) :: y
-    real(dp), intent(out) :: deltay
-    real(dp) :: jackk
-    real(dp),dimension(Mbins) :: xmean
-    integer(i4) :: k,N,i
-      N=size(x)
-      deltay=0._dp
-      jackk=0._dp
-      xmean=0._dp
-      do i=1,Mbins
-        do k=1,N
-          if(k .le. (i-1)*N/Mbins) then
-            xmean(i)=xmean(i)+x(k)
-          else if(k > i*N/Mbins) then
-            xmean(i)=xmean(i)+x(k)
-          end if
-        end do
-        xmean(i)=xmean(i)/(real(N,dp) -real(N/Mbins,dp))
-      end do
-      do k=1,Mbins
-        jackk=jackk+(xmean(k)-y )**2
-      end do
-      deltay=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
-  end subroutine jackknife
   
-  subroutine jackknife2(x,y,deltay)
+  subroutine jackknife(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(in) :: y
     real(dp), intent(out) :: deltay
@@ -256,63 +240,64 @@ contains
         deallocate(xmean)
       end do
       deltay=maxval(delta_y)
-  end subroutine jackknife2
+  end subroutine jackknife
 
   subroutine standard_error(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(in) :: y
     real(dp), intent(out) :: deltay
     real(dp) :: variance
-    integer(i4) :: k,N
-    N=size(x)
+    integer(i4) :: k,Narr
+    Narr=size(x)
     deltay=0._dp
     variance=0._dp
-    do k=1,N
+    do k=1,Narr
       variance=variance+(x(k) -y)**2
     end do
-    variance=variance/real(N-1,dp)
-    deltay=Sqrt(variance/real(N,dp))
+    variance=variance/real(Narr-1,dp)
+    deltay=Sqrt(variance/real(Narr,dp))
   end subroutine standard_error
 
   subroutine mean_0(x,y)
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(out) :: y
-    integer(i4) :: k,N
-    N=size(x)
+    integer(i4) :: k,Narr
+    Narr=size(x)
     y=0._dp
-    do k=1,N
+    do k=1,Narr
       y=y+x(k)
     end do
-    y=y/real(N,dp)
+    y=y/real(Narr,dp)
   end subroutine mean_0
 
   subroutine mean_scalar(x,y,deltay)
     real(dp), dimension(:), intent(in) :: x
     real(dp), intent(out) :: y,deltay
-    integer(i4) :: k,N
-    N=size(x)
+    integer(i4) :: k,Narr
+    Narr=size(x)
     y=0._dp
-    do k=1,N
+    do k=1,Narr
       y=y+x(k)
     end do
-    y=y/real(N,dp)
+    y=y/real(Narr,dp)
     !call standard_error(x,y,deltay)
     call jackknife(x,y,deltay)
   end subroutine mean_scalar
 
   subroutine mean_vector(x,y,deltay)
-    real(dp), dimension(N,Nmsrs), intent(in) :: x
-    real(dp), dimension(N), intent(out) :: y,deltay
-    integer(i4) :: i1
+    real(dp), dimension(:,:), intent(in) :: x !x(N,Nmsrs or Nmsrs2)
+    real(dp), dimension(size(x,dim=1)), intent(out) :: y,deltay
+    integer(i4) :: i1,Narr
     y=0._dp
     deltay=0._dp
-    do i1=1,N
+    Narr=size(x,dim=1)
+    do i1=1,Narr
       call mean_scalar(x(i1,:),y(i1),deltay(i1))
     end do
   end subroutine mean_vector
 
   subroutine mean_matrix(x,y,deltay)
-    real(dp), dimension(N,N,Nmsrs), intent(in) :: x
+    real(dp), dimension(:,:,:), intent(in) :: x !x(N,N,Nmsrs or Nmsrs2)
     real(dp), dimension(N,N), intent(out) :: y,deltay
     integer(i4) :: i1,i2
     y=0._dp

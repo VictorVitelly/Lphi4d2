@@ -82,7 +82,7 @@ contains
     integer(i4):: i1,i2,Narr
     real(dp) :: Magnet
     Narr=size(phi,dim=1)
-    mean=0._dp
+    Magnet=0._dp
     do i1=1,Narr
       do i2=1,Narr
         Magnet=Magnet+phi(i1,i2)

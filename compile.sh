@@ -13,4 +13,5 @@ do
 done
 
 $FC $BIN/*.o -o $BIN/$TARGET
-$BIN/$TARGET
+
+(echo 1) |$BIN/$TARGET

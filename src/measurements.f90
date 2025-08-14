@@ -7,11 +7,10 @@ module measurements
 
 contains
 
-  subroutine correlation(phi,k,corr1,corr2)
+  subroutine correlation(phi,corr1,corr2)
     real(dp), dimension(N,N), intent(in) :: phi
-    integer(i4), intent(in) :: k
-    real(dp), dimension(N,Nmsrs), intent(inout) :: corr1
-    real(dp), dimension(N,N,Nmsrs), intent(inout) :: corr2
+    real(dp), dimension(N), intent(inout) :: corr1
+    real(dp), dimension(N,N), intent(inout) :: corr2
     real(dp), dimension(N) :: varphi
     integer(i4) :: i1,i2
     varphi=0._dp
@@ -20,10 +19,11 @@ contains
         varphi(i1)=varphi(i1)+phi(i1,i2)
       end do
     end do
+    varphi(:)=varphi(:)/real(N,dp)
     do i1=1,N
-      corr1(i1,k)=varphi(i1)
+      corr1(i1)=corr1(i1)+varphi(i1)
       do i2=1,N
-        corr2(i1,i2,k)=varphi(i1)*varphi(i2)
+        corr2(i1,i2)=corr2(i1,i2)+varphi(i1)*varphi(i2)
       end do
     end do
   end subroutine correlation
@@ -49,19 +49,22 @@ contains
     end do
   end subroutine correlation_function
   
-  subroutine autocorrelation(m0,tmax,phi)
-    integer(i4), intent(in) :: tmax
+  subroutine autocorrelation(m0,tmax,phi,montecarlos)
+    integer(i4), intent(in) :: tmax,montecarlos
     real(dp), intent(in) :: m0
     real(dp), dimension(N,N), intent(inout) :: phi
     real(dp), dimension(tmax+1) :: auto,auto_delta
     real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
     real(dp) :: E_ave,auto1_ave,autoj(tmax+1,Nauto)
     integer(i4) :: i,j,tt
+    character(len=32) :: filename
+    write(filename, '("data/autocorrmcs", I0, ".dat")') montecarlos
     !tt=tmax
-    open(10, file = 'data/autocorr.dat', status = 'replace')
+    open(10, file = filename, status = 'replace')
+    print*, 'File created at:', filename
     do j=1,Nauto
       do i=1,Nmsrs+tmax
-        call metropolis(m0,phi)
+        call cycles(m0,phi,montecarlos)
         E(i)=S(m0,phi)/(real(N,dp)**2)
       end do
       call mean_0(E,E_ave )
