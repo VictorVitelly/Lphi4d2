@@ -19,8 +19,8 @@ program main
   !call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
-  !call thermalize(-1.25_dp,kkkk)
-  call time_test(-1.25_dp,kkkk)
+  call thermalize(-1.26_dp,kkkk)
+  !call time_test(-1.25_dp,kkkk)
 
   !Histogram
   !call make_histogram(-1.4_dp)

@@ -4,7 +4,7 @@ module parameters
     implicit none
 
     !integer(i4), parameter :: N=64,thermalization=40000,Nmsrs=20000,eachsweep=500
-    integer(i4), parameter :: N=16,thermalization=10000,Nmsrs=40000,eachsweep=500,Nmsrs2=1500
+    integer(i4), parameter :: N=8,thermalization=10000,Nmsrs=14000,eachsweep=500,Nmsrs2=1500
     integer(i4) :: sweeps=thermalization+eachsweep*Nmsrs
     integer(i4), parameter :: Mbins=10,bins=101,Nauto=15000,Mbin(4)=(/5,10,15,20/)
 

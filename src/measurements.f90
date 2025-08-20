@@ -65,7 +65,8 @@ contains
     do j=1,Nauto
       do i=1,Nmsrs+tmax
         call cycles(m0,phi,montecarlos)
-        E(i)=S(m0,phi)/(real(N,dp)**2)
+        !E(i)=S(m0,phi)/(real(N,dp)**2)
+        E(i)=abs(Magnet(phi))/(real(N,dp)**2)
       end do
       call mean_0(E,E_ave )
       
