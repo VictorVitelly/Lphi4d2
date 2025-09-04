@@ -7,27 +7,29 @@ program main
   use statistics
   use measurements
   implicit none
-  integer(i4) kkkk
-  
-  write(*,*) 'How many Metropolis per cycle?' 
-  read(*,*) kkkk
-  write(*,*) 'Correctly read k=',kkkk
-  
+  !integer(i4) kkkk
+
   call cpu_time(starting)
   
   !Only measure the acc. rate, must modify dphi
   !call acceptance_rate(-1.2_dp)
 
   !Thermalization history and autocorretion functions
-  call thermalize(-1.26_dp,kkkk)
+  !write(*,*) 'How many Metropolis per cycle?' 
+  !read(*,*) kkkk
+  !write(*,*) 'Correctly read k=',kkkk
+  !call thermalize(-1.27_dp,kkkk)
   !call time_test(-1.25_dp,kkkk)
 
   !Histogram
   !call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
-  !call vary_m0(-2.0_dp,-0.0_dp,30)
-
+  !call vary_m0(-2.0_dp,-0.25_dp,100)
+  !call vary_m0(-1.6_dp,-0.6_dp,79)
+  call vary_m0(-1.4_dp,-1.15_dp,42)
+  !call vary_m0(-1.31_dp,-1.21_dp,10)
+  !call vary_m0(-1.4_dp,-1.0_dp,11)  
   !Measure correlation function
   !call correlate(-2.5_dp)
 
@@ -50,7 +52,7 @@ contains
     !if(i==1 .or. mod(i,500)==0) then
     !  write(10,*) i,",", S(m0,phi)/real(N**2,dp)
     !end if
-    call metropolis(m0,phi)
+    call cycles(m0,phi,montecarlos)
   end do
   call autocorrelation(m0,201,phi,montecarlos)
   close(10)
@@ -144,39 +146,50 @@ contains
   close(50)
   end subroutine make_histogram
 
-  subroutine correlate(m0)
-  real(dp), intent(in) :: m0
-  real(dp), allocatable :: phi(:,:),corr1(:),corr2(:,:),CF(:,:),CF_ave(:),CF_delta(:)
-  integer(i4) :: i,j
+  subroutine correlate(mi,mf,Nts)
+  real(dp), intent(in) :: mi,mf
+  real(dp) :: m0
+  integer(i4) :: Nts
+  real(dp), allocatable :: phi(:,:),corr1(:),corr2(:,:),CF(:,:),CF_ave(:,:),CF_delta(:,:)
+  integer(i4) :: i,j,k,i2
   open(60, file = 'data/corrfunc.dat', status = 'replace')
   allocate(phi(N,N))
   allocate(corr1(N))
   allocate(corr2(N,N))
   allocate(CF(N,Nmsrs2))
-  allocate(CF_ave(N))
-  allocate(CF_delta(N))
+  allocate(CF_ave(N,Nts))
+  allocate(CF_delta(N,Nts))
 
   !call cold_start(phi)
-  call hot_start(phi,hotphi)
-  do j=1,Nmsrs2
-    corr1(:)=0._dp
-    corr2(:,:)=0._dp
-    do i=1,sweeps
-      call metropolis(m0,phi)
-      if(i>thermalization .and. mod(i,eachsweep)==0) then
-        call correlation(phi,corr1,corr2)
-      end if
+  do k=1,Nts
+    m0=mi+(mf-mi)*real(k-1,dp)/real(Nts-1,dp)
+    call hot_start(phi,hotphi)
+    !call cold_start(phi)
+    do j=1,thermalization
+      call cycles(m0,phi,5)
     end do
-    corr1(:)=corr1(:)/real(Nmsrs,dp)
-    corr2(:,:)=corr2(:,:)/real(Nmsrs,dp)
-    do i=1,N
+    do j=1,Nmsrs2
+      corr1(:)=0._dp
+      corr2(:,:)=0._dp
+      do i=1,Nmsrs
+        do i2=1,eachsweep
+          call cycles(m0,phi,5)
+        end do
+        call correlation(phi,corr1,corr2)
+      end do
+      corr1(:)=corr1(:)/real(Nmsrs,dp)
+      corr2(:,:)=corr2(:,:)/real(Nmsrs,dp)
+      do i=1,N
         CF(i,j)=corr2(i,1)-corr1(i)*corr1(1)
+      end do
+    end do
+    do j=1,N
+      call mean_scalar(CF(j,:),CF_ave(j,k),CF_delta(j,k))
     end do
   end do
-
-  call mean_vector(CF,CF_ave,CF_delta)
-  do i=1,N+1
-    write(60,*) abs(i-1), CF_ave(iv(i)), CF_delta(iv(i))
+  
+  do k=1,N+1
+    write(60,*) abs(k-1), CF_ave(iv(k),:), CF_delta(iv(k),:)
   end do
 
   deallocate(corr1,corr2,CF,CF_ave,CF_delta)
@@ -188,12 +201,13 @@ contains
   real(dp), intent(in) :: mi,mf
   integer(i4), intent(in) :: Nts
   real(dp), dimension(N,N) :: phi
-  integer(i4) :: i,j,k
+  integer(i4) :: i,j,k,ie
   real(dp), dimension(Nmsrs2) :: E,M,suscep,heat,U4
   real(dp) :: m0,vol,norm,EE,MM,E_ave,E_delta,M_ave,M_delta,E2,M2,M4
   real(dp) :: suscep_ave,suscep_delta,heat_ave,heat_delta,U4_ave,U4_delta
   !real(dp) :: ARR,ar(Nmsrs2),ar_ave,ar_delta
   !real(dp) :: csx,csx2,cs(Nmsrs2),cs2(Nmsrs2),cs_ave,cs_delta,cs2_ave,cs2_delta
+  !open(1, file = 'data/history.dat', status = 'replace')
   open(10, file = 'data/action.dat', status = 'replace')
   open(20, file = 'data/magnetization.dat', status = 'replace')
   open(30, file = 'data/susceptibility.dat', status = 'replace')
@@ -213,27 +227,28 @@ contains
     !cs(:)=0._dp
     !cs2(:)=0._dp
     !ar(:)=0._dp
+    do j=1,thermalization
+      call cycles(m0,phi,4)
+      !write(1,*) m0, j, S(m0,phi)/vol
+    end do
     do j=1,Nmsrs2
       E2=0._dp
       M2=0._dp
       M4=0._dp
-      do i=1,sweeps
-        if(i>thermalization .and. mod(i,eachsweep)==0 ) then
-          MM=Magnet(phi)
-          EE=S(m0,phi)
-          E(j)=E(j)+EE
-          M(j)=M(j)+abs(MM)
-          E2=E2+EE**2
-          M2=M2+MM**2
-          M4=M4+MM**4
-          !cs(j)=cs(j)+csx
-          !cs2(j)=cs2(j)+csx2
-          !ar(j)=ar(j)+ARR
-        end if
-        call metropolis(m0,phi)
-        !call montecarlo(m0,dphi,phi,ARR)
-        !call cluster(spint,T)
-        !call cluster2(spin,T,csx,csx2)
+      do i=1,Nmsrs
+        do ie=1,eachsweep
+          call cycles(m0,phi,4)
+        end do
+        MM=Magnet(phi)
+        EE=S(m0,phi)
+        E(j)=E(j)+EE
+        M(j)=M(j)+abs(MM)
+        E2=E2+EE**2
+        M2=M2+MM**2
+        M4=M4+MM**4
+        !cs(j)=cs(j)+csx
+        !cs2(j)=cs2(j)+csx2
+        !ar(j)=ar(j)+ARR      
       end do
       E(j)=E(j)/norm
       M(j)=M(j)/norm
@@ -265,6 +280,7 @@ contains
     !write(80,*) m0, ar_ave, ar_delta
   end do
   
+  !close(1)
   close(10)
   close(20)
   close(30)

@@ -322,37 +322,6 @@ contains
     y=y/real(size(x,dim=1)*size(x,dim=2),dp)
   end subroutine mean_phi
 
-  subroutine heat_jackk(heat1,heat2,heat_ave,deltaheat)
-    real(dp), dimension(:), intent(in) :: heat1, heat2
-    real(dp), intent(out) :: heat_ave, deltaheat
-    integer(i4) :: N,k,i
-    real(dp) :: heat1t,heat2t,heat1d,heat2d,jackk,Ntot
-    real(dp), dimension(10) :: heatmean1,heatmean2,heat_avev
-      N=size(heat1)
-      Ntot=real(N,dp)-real(N,dp)/real(Mbins,dp)
-      call mean_scalar(heat1,heat1t,heat1d)
-      call mean_scalar(heat2,heat2t,heat2d)
-      heat_ave=heat1t-heat2t**2
-      heatmean1=0._dp
-      heatmean2=0._dp
-      do i=1,Mbins
-        do k=1,N
-          if(k .le. (i-1)*N/Mbins) then
-            heatmean1(i)=heatmean1(i)+heat1(k)
-            heatmean2(i)=heatmean2(i)+heat2(k)
-          else if(k > i*N/Mbins) then
-            heatmean1(i)=heatmean1(i)+heat1(k)
-            heatmean2(i)=heatmean2(i)+heat2(k)
-          end if
-        end do
-        heat_avev(i)=(heatmean1(i)/Ntot) -(heatmean2(i)/Ntot)**2
-      end do
-      do k=1,Mbins
-        jackk=jackk+(heat_avev(k)-heat_ave )**2
-      end do
-      deltaheat=Sqrt(real(Mbins-1,dp)*jackk/real(Mbins,dp))
-  end subroutine heat_jackk
-
   subroutine histogram(x,A1,A2)
   real(dp), dimension(:,:), intent(in) :: x
   integer(i4), dimension(bins), intent(inout) :: A1
