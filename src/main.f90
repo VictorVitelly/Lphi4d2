@@ -25,9 +25,9 @@ program main
   !call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
-  !call vary_m0(-2.0_dp,-0.25_dp,100)
+  call vary_m0(-1.6_dp,-0.8_dp,40)
   !call vary_m0(-1.6_dp,-0.6_dp,79)
-  call vary_m0(-1.4_dp,-1.15_dp,42)
+  !call vary_m0(-1.4_dp,-1.15_dp,42)
   !call vary_m0(-1.31_dp,-1.21_dp,10)
   !call vary_m0(-1.4_dp,-1.0_dp,11)  
   !Measure correlation function
@@ -228,7 +228,7 @@ contains
     !cs2(:)=0._dp
     !ar(:)=0._dp
     do j=1,thermalization
-      call cycles(m0,phi,4)
+      call cycles(m0,phi,5)
       !write(1,*) m0, j, S(m0,phi)/vol
     end do
     do j=1,Nmsrs2
@@ -237,7 +237,7 @@ contains
       M4=0._dp
       do i=1,Nmsrs
         do ie=1,eachsweep
-          call cycles(m0,phi,4)
+          call cycles(m0,phi,5)
         end do
         MM=Magnet(phi)
         EE=S(m0,phi)

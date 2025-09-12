@@ -3,10 +3,11 @@ module parameters
     use iso_fortran_env, only : dp => real64, i4 => int32
     implicit none
 
-    !integer(i4), parameter :: N=8,thermalization=250,eachsweep=27
-    !integer(i4), parameter :: N=16,thermalization=350,eachsweep=36
-    integer(i4), parameter :: N=32,thermalization=450,eachsweep=45
-    !integer(i4), parameter :: N=64,thermalization=550,eachsweep=55
+    integer(i4), parameter :: N=8,thermalization=1300,eachsweep=27
+    !integer(i4), parameter :: N=16,thermalization=1800,eachsweep=36
+    !integer(i4), parameter :: N=32,thermalization=2300,eachsweep=45
+    !integer(i4), parameter :: N=64,thermalization=2700,eachsweep=55
+    !integer(i4), parameter :: N=128,thermalization=3000,eachsweep=60
     integer(i4), parameter :: Nmsrs=250, Nmsrs2=120
     integer(i4) :: sweeps=thermalization+eachsweep*Nmsrs
     integer(i4), parameter :: bins=101,Nauto=1500,Mbin(5)=(/4,5,10,15,20/)
