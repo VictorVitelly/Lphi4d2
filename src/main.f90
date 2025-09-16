@@ -25,13 +25,14 @@ program main
   !call make_histogram(-1.4_dp)
 
   !Measure action, magnetization, susceptibility and heat cap.
-  call vary_m0(-1.6_dp,-0.8_dp,40)
+  !call vary_m0(-1.6_dp,-0.8_dp,40)
   !call vary_m0(-1.6_dp,-0.6_dp,79)
   !call vary_m0(-1.4_dp,-1.15_dp,42)
   !call vary_m0(-1.31_dp,-1.21_dp,10)
   !call vary_m0(-1.4_dp,-1.0_dp,11)  
+  
   !Measure correlation function
-  !call correlate(-2.5_dp)
+  call correlate(-1.6_dp,-0.8_dp,20)
 
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"
@@ -163,24 +164,25 @@ contains
   !call cold_start(phi)
   do k=1,Nts
     m0=mi+(mf-mi)*real(k-1,dp)/real(Nts-1,dp)
-    call hot_start(phi,hotphi)
-    !call cold_start(phi)
-    do j=1,thermalization
-      call cycles(m0,phi,5)
+    write(*,*) m0
+    !call hot_start(phi,hotphi)
+    call cold_start(phi)
+    do j=1,2*thermalization
+      call cycles(m0,phi,4)
     end do
     do j=1,Nmsrs2
       corr1(:)=0._dp
       corr2(:,:)=0._dp
       do i=1,Nmsrs
         do i2=1,eachsweep
-          call cycles(m0,phi,5)
+          call cycles(m0,phi,4)
         end do
         call correlation(phi,corr1,corr2)
       end do
       corr1(:)=corr1(:)/real(Nmsrs,dp)
       corr2(:,:)=corr2(:,:)/real(Nmsrs,dp)
       do i=1,N
-        CF(i,j)=corr2(i,1)-corr1(i)*corr1(1)
+        CF(i,j)=corr2(i,1)-corr1(1)*corr1(1)
       end do
     end do
     do j=1,N
@@ -228,7 +230,7 @@ contains
     !cs2(:)=0._dp
     !ar(:)=0._dp
     do j=1,thermalization
-      call cycles(m0,phi,5)
+      call cycles(m0,phi,4)
       !write(1,*) m0, j, S(m0,phi)/vol
     end do
     do j=1,Nmsrs2
@@ -237,7 +239,7 @@ contains
       M4=0._dp
       do i=1,Nmsrs
         do ie=1,eachsweep
-          call cycles(m0,phi,5)
+          call cycles(m0,phi,4)
         end do
         MM=Magnet(phi)
         EE=S(m0,phi)

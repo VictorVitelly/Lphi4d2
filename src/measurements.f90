@@ -27,27 +27,6 @@ contains
       end do
     end do
   end subroutine correlation
-
-  subroutine correlation_function(corr1,corr2,CF,CFprom)
-    real(dp), dimension(N,Nmsrs), intent(in) :: corr1
-    real(dp), dimension(N,N,Nmsrs), intent(in) :: corr2
-    real(dp), dimension(N,N), intent(out) :: CF,CFprom
-    real(dp), dimension(N) :: corr1prom,corr1delta
-    real(dp), dimension(N,N) :: corr2prom,corr2delta
-    integer(i4) :: i1,i2
-    corr1prom=0._dp
-    corr2prom=0._dp
-    corr1delta=0._dp
-    corr2delta=0._dp
-    call mean_vector(corr1,corr1prom,corr1delta)
-    call mean_matrix(corr2,corr2prom,corr2delta)
-    do i1=1,N
-      do i2=1,N
-        CF(i1,i2)=corr2prom(i1,i2)-corr1prom(i1)*corr1prom(i2)
-        CFprom(i1,i2)=Sqrt((corr2delta(i1,i2))**2+(corr1prom(i1)*corr1delta(i2))**2 +(corr1prom(i2)*corr1delta(i1) )**2)
-      end do
-    end do
-  end subroutine correlation_function
   
   subroutine autocorrelation(m0,tmax,phi,montecarlos)
     integer(i4), intent(in) :: tmax,montecarlos
