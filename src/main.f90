@@ -12,13 +12,13 @@ program main
   call cpu_time(starting)
   
   !Only measure the acc. rate, must modify dphi
-  !call acceptance_rate(-1.2_dp)
+  !call acceptance_rate(-0.1_dp)
 
   !Thermalization history and autocorretion functions
   !write(*,*) 'How many Metropolis per cycle?' 
   !read(*,*) kkkk
   !write(*,*) 'Correctly read k=',kkkk
-  !call thermalize(-1.27_dp,kkkk)
+  !call thermalize(-0.18_dp,4)
   !call time_test(-1.25_dp,kkkk)
 
   !Histogram
@@ -32,7 +32,7 @@ program main
   !call vary_m0(-1.4_dp,-1.0_dp,11)  
   
   !Measure correlation function
-  call correlate(-1.6_dp,-0.8_dp,20)
+  call correlate(-1.6_dp,-1.0_dp,20)
 
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"
@@ -50,9 +50,9 @@ contains
   !call cold_start(phi)
   do i=1,2*thermalization
     !50 sweeps for L=8, 500 sweeps for L=64
-    !if(i==1 .or. mod(i,500)==0) then
-    !  write(10,*) i,",", S(m0,phi)/real(N**2,dp)
-    !end if
+    if(i==1 .or. mod(i,eachsweep)==0) then
+      write(10,*) i,",", S(m0,phi)/real(N**2,dp)
+    end if
     call cycles(m0,phi,montecarlos)
   end do
   call autocorrelation(m0,201,phi,montecarlos)
@@ -65,16 +65,18 @@ contains
   real(dp), allocatable :: phi(:,:)
   real(dp), intent(in) :: m0
   real(dp) :: ARR,AR_ave,AR_delta
-  real(dp), dimension(Nmsrs) :: AR
+  real(dp), dimension(10000) :: AR
   real(dp),dimension(201,10) :: hist
   integer(i4) :: i,k,k2,j
   open(10, file = 'data/history.dat', status = 'replace')
+  dphi=0.1_dp
+  hotphi=2._dp*dphi
   do j=1,10
     k2=0
     allocate(phi(N,N))
     call cold_start(phi)
     !call hot_start(phi,hotphi)
-    do i=1,5*thermalization
+    do i=1,20000
       if(i==1 .or. mod(i,500)==0) then
         k2=k2+1
         hist(k2,j)=S(m0,phi)/real(N**2,dp)
@@ -83,14 +85,15 @@ contains
     end do
     k=0
     AR=0._dp
-    do i=1,sweeps
+    do i=1,10000000
       call montecarlo(m0,dphi,phi,ARR)
-      if(i>thermalization .and. mod(i,eachsweep)==0) then
+      if( mod(i,1000)==0) then
         k=k+1
         AR(k)=ARR
       end if
       call flip_sign(phi,i)
     end do
+    write(*,*) k
     call mean_scalar(AR,AR_ave,AR_delta)
     write(*,*) dphi, ",", AR_ave,",", AR_delta
     deallocate(phi)
@@ -241,7 +244,7 @@ contains
         do ie=1,eachsweep
           call cycles(m0,phi,4)
         end do
-        MM=Magnet(phi)
+        MM=mean(phi)
         EE=S(m0,phi)
         E(j)=E(j)+EE
         M(j)=M(j)+abs(MM)

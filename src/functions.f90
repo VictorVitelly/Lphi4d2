@@ -76,19 +76,6 @@ contains
       end do
     end do
   end function mean
-  
-  function Magnet(phi)
-    real(dp), dimension(:,:), intent(in) :: phi
-    integer(i4):: i1,i2,Narr
-    real(dp) :: Magnet
-    Narr=size(phi,dim=1)
-    Magnet=0._dp
-    do i1=1,Narr
-      do i2=1,Narr
-        Magnet=Magnet+phi(i1,i2)
-      end do
-    end do
-  end function Magnet
 
   recursive function find(x,parent) result(out)
     integer(i4), intent(in) :: x

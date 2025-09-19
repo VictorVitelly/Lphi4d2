@@ -12,16 +12,18 @@ contains
     real(dp), dimension(N), intent(inout) :: corr1
     real(dp), dimension(N,N), intent(inout) :: corr2
     real(dp), dimension(N) :: varphi
+    real(dp) :: meanabs
     integer(i4) :: i1,i2
     varphi=0._dp
+    meanabs=mean(phi)/real(N**2,dp)
     do i1=1,N
-      do i2=1,N
-        varphi(i1)=varphi(i1)+phi(i1,i2)
-      end do
+      !do i2=1,N
+        varphi(i1)=varphi(i1)+phi(i1,1)
+      !end do
     end do
     varphi(:)=varphi(:)/real(N,dp)
     do i1=1,N
-      corr1(i1)=corr1(i1)+varphi(i1)
+      corr1(i1)=corr1(i1)+meanabs
       do i2=1,N
         corr2(i1,i2)=corr2(i1,i2)+varphi(i1)*varphi(i2)
       end do
@@ -45,7 +47,7 @@ contains
       do i=1,Nmsrs+tmax
         call cycles(m0,phi,montecarlos)
         !E(i)=S(m0,phi)/(real(N,dp)**2)
-        E(i)=abs(Magnet(phi))/(real(N,dp)**2)
+        E(i)=abs(mean(phi))/(real(N,dp)**2)
       end do
       call mean_0(E,E_ave )
       

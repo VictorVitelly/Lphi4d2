@@ -198,11 +198,10 @@ contains
     real(dp), dimension(N,N), intent(inout) :: phi
     integer(i4), intent(in) :: k
     integer(i4) :: i
-    call cluster(phi)
     do i=1,k
       call metropolis(m0,phi)
     end do
-    !call cluster(phi)
+    call cluster(phi)
   end subroutine cycles
 
 
