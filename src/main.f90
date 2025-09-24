@@ -12,35 +12,37 @@ program main
   call cpu_time(starting)
   
   !Only measure the acc. rate, must modify dphi
-  !call acceptance_rate(-0.1_dp)
+  !call acceptance_rate(-0.1_dp,lambda0)
 
   !Thermalization history and autocorretion functions
   !write(*,*) 'How many Metropolis per cycle?' 
   !read(*,*) kkkk
   !write(*,*) 'Correctly read k=',kkkk
-  !call thermalize(-0.18_dp,4)
-  !call time_test(-1.25_dp,kkkk)
+  !call thermalize(-0.18_dp,lambda0,4)
+  !call time_test(-1.25_dp,lambda0,kkkk)
 
   !Histogram
-  !call make_histogram(-1.4_dp)
+  !call make_histogram(-1.4_dp,lambda0)
 
   !Measure action, magnetization, susceptibility and heat cap.
-  !call vary_m0(-1.6_dp,-0.8_dp,40)
-  !call vary_m0(-1.6_dp,-0.6_dp,79)
-  !call vary_m0(-1.4_dp,-1.15_dp,42)
-  !call vary_m0(-1.31_dp,-1.21_dp,10)
-  !call vary_m0(-1.4_dp,-1.0_dp,11)  
+  !call vary_m0(-1.6_dp,-0.8_dp,lambda0,40)
+  !call vary_m0(-1.6_dp,-0.6_dp,lambda0,79)
+  !call vary_m0(-1.4_dp,-1.15_dp,lambda0,42)
+  !call vary_m0(-1.31_dp,-1.21_dp,lambda0,10)
+  !call vary_m0(-1.4_dp,-1.0_dp,lambda0,11)  
   
   !Measure correlation function
-  call correlate(-1.6_dp,-1.0_dp,20)
+  call correlate(-1.6_dp,-1.0_dp,lambda0,10)
+  !call correlate(-0.5_dp,0.15_dp,0.45_dp,16)
+  
 
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"
 
 contains
 
-  subroutine thermalize(m0,montecarlos)
-  real(dp), intent(in) :: m0
+  subroutine thermalize(m0,lamb0,montecarlos)
+  real(dp), intent(in) :: m0,lamb0
   integer(i4),intent(in) :: montecarlos
   real(dp), allocatable :: phi(:,:)
   integer(i4) :: i
@@ -51,19 +53,19 @@ contains
   do i=1,2*thermalization
     !50 sweeps for L=8, 500 sweeps for L=64
     if(i==1 .or. mod(i,eachsweep)==0) then
-      write(10,*) i,",", S(m0,phi)/real(N**2,dp)
+      write(10,*) i,",", S(m0,lamb0,phi)/real(N**2,dp)
     end if
-    call cycles(m0,phi,montecarlos)
+    call cycles(m0,lamb0,phi,montecarlos)
   end do
-  call autocorrelation(m0,201,phi,montecarlos)
+  call autocorrelation(m0,lamb0,201,phi,montecarlos)
   close(10)
   deallocate(phi)
   end subroutine thermalize
 
   !Measure acceptance rate for different DeltaPhi, recommended start at dphi=0.1
-  subroutine acceptance_rate(m0)
+  subroutine acceptance_rate(m0,lamb0)
   real(dp), allocatable :: phi(:,:)
-  real(dp), intent(in) :: m0
+  real(dp), intent(in) :: m0,lamb0
   real(dp) :: ARR,AR_ave,AR_delta
   real(dp), dimension(10000) :: AR
   real(dp),dimension(201,10) :: hist
@@ -79,14 +81,14 @@ contains
     do i=1,20000
       if(i==1 .or. mod(i,500)==0) then
         k2=k2+1
-        hist(k2,j)=S(m0,phi)/real(N**2,dp)
+        hist(k2,j)=S(m0,lamb0,phi)/real(N**2,dp)
       end if
-      call montecarlo(m0,dphi,phi,ARR)
+      call montecarlo(m0,lamb0,dphi,phi,ARR)
     end do
     k=0
     AR=0._dp
     do i=1,10000000
-      call montecarlo(m0,dphi,phi,ARR)
+      call montecarlo(m0,lamb0,dphi,phi,ARR)
       if( mod(i,1000)==0) then
         k=k+1
         AR(k)=ARR
@@ -110,8 +112,8 @@ contains
   close(10)
   end subroutine acceptance_rate
 
-  subroutine make_histogram(m0)
-  real(dp), intent(in) :: m0
+  subroutine make_histogram(m0,lamb0)
+  real(dp), intent(in) :: m0,lamb0
   real(dp), allocatable :: phi(:,:)
   real(dp), allocatable :: A2(:)
   integer(i4), allocatable :: A1(:)
@@ -130,7 +132,7 @@ contains
   k=0
 
   do i=1,sweeps
-    call montecarlo(m0,dphi,phi,ARR)
+    call montecarlo(m0,lamb0,dphi,phi,ARR)
     if(i>thermalization .and. mod(i,eachsweep)==0) then
       k=k+1
       call histogram(phi,A1,A2)
@@ -150,9 +152,11 @@ contains
   close(50)
   end subroutine make_histogram
 
-  subroutine correlate(mi,mf,Nts)
-  real(dp), intent(in) :: mi,mf
-  real(dp) :: m0
+  subroutine correlate(mi,mf,lamb0,Nts)
+  real(dp), intent(in) :: mi,mf,lamb0
+  !subroutine correlate(m0,lambi,lambf,Nts)
+  !real(dp), intent(in) :: m0,lambi,lambf
+  real(dp) :: x0
   integer(i4) :: Nts
   real(dp), allocatable :: phi(:,:),corr1(:),corr2(:,:),CF(:,:),CF_ave(:,:),CF_delta(:,:)
   integer(i4) :: i,j,k,i2
@@ -166,26 +170,29 @@ contains
 
   !call cold_start(phi)
   do k=1,Nts
-    m0=mi+(mf-mi)*real(k-1,dp)/real(Nts-1,dp)
-    write(*,*) m0
-    !call hot_start(phi,hotphi)
+    CF(:,:)=0._dp
+    x0=mi+(mf-mi)*real(k-1,dp)/real(Nts-1,dp)
+    !x0=lambi+(lambf-lambi)*real(k-1,dp)/real(Nts-1,dp)
+    write(*,*) x0
     call cold_start(phi)
     do j=1,2*thermalization
-      call cycles(m0,phi,4)
+      call cycles(x0,lamb0,phi,4)
+      !call cycles(m0,x0,phi,4)
     end do
     do j=1,Nmsrs2
       corr1(:)=0._dp
       corr2(:,:)=0._dp
       do i=1,Nmsrs
         do i2=1,eachsweep
-          call cycles(m0,phi,4)
+          call cycles(x0,lamb0,phi,4)
+          !call cycles(m0,x0,phi,4)
         end do
         call correlation(phi,corr1,corr2)
       end do
       corr1(:)=corr1(:)/real(Nmsrs,dp)
       corr2(:,:)=corr2(:,:)/real(Nmsrs,dp)
       do i=1,N
-        CF(i,j)=corr2(i,1)-corr1(1)*corr1(1)
+        CF(i,j)=corr2(i,1)-(corr1(1)*corr1(1))
       end do
     end do
     do j=1,N
@@ -202,8 +209,8 @@ contains
   close(60)
   end subroutine correlate
   
- subroutine vary_m0(mi,mf,Nts)
-  real(dp), intent(in) :: mi,mf
+ subroutine vary_m0(mi,mf,lamb0,Nts)
+  real(dp), intent(in) :: mi,mf,lamb0
   integer(i4), intent(in) :: Nts
   real(dp), dimension(N,N) :: phi
   integer(i4) :: i,j,k,ie
@@ -233,7 +240,7 @@ contains
     !cs2(:)=0._dp
     !ar(:)=0._dp
     do j=1,thermalization
-      call cycles(m0,phi,4)
+      call cycles(m0,lamb0,phi,4)
       !write(1,*) m0, j, S(m0,phi)/vol
     end do
     do j=1,Nmsrs2
@@ -242,10 +249,10 @@ contains
       M4=0._dp
       do i=1,Nmsrs
         do ie=1,eachsweep
-          call cycles(m0,phi,4)
+          call cycles(m0,lamb0,phi,4)
         end do
         MM=mean(phi)
-        EE=S(m0,phi)
+        EE=S(m0,lamb0,phi)
         E(j)=E(j)+EE
         M(j)=M(j)+abs(MM)
         E2=E2+EE**2
@@ -296,9 +303,9 @@ contains
   !close(80)
   end subroutine vary_m0
   
-  subroutine time_test(m0,montecarlos)
+  subroutine time_test(m0,lamb0,montecarlos)
   integer(i4), intent(in) :: montecarlos
-  real(dp), intent(in) :: m0
+  real(dp), intent(in) :: m0,lamb0
   integer(i4) :: i,j
   real(dp) :: ti,tf,time_ave,time_delta
   real(dp) :: phi(N,N),time(120)
@@ -306,7 +313,7 @@ contains
   do j=1,120
     call cpu_time(ti)
     do i=1,100000
-      call cycles(m0,phi,montecarlos)
+      call cycles(m0,lamb0,phi,montecarlos)
     end do
     call cpu_time(tf)
     time(j)=tf-ti

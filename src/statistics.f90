@@ -12,7 +12,7 @@ contains
     real(dp), intent(in) :: bound
     real(dp) :: y
     call random_number(y)
-    x = 2._dp*bound*y -bound
+    x=2._dp*bound*y -bound
   end subroutine random_phi
 
   subroutine cold_start(phi)
@@ -31,8 +31,8 @@ contains
     end do
   end subroutine hot_start
 
-  subroutine montecarlo(m0,dphi,phi,AR)
-    real(dp), intent(in) :: m0,dphi
+  subroutine montecarlo(m0,lamb0,dphi,phi,AR)
+    real(dp), intent(in) :: m0,lamb0,dphi
     real(dp), dimension(N,N), intent(inout) :: phi
     real(dp), intent(out) :: AR
     real(dp) :: deltaphi,phi2,DS,r,p
@@ -42,7 +42,7 @@ contains
       do i2=1,N
         call random_phi(deltaphi,dphi)
         phi2=phi(i1,i2)+deltaphi
-        DS=DeltaS(m0,phi,i1,i2,phi2)
+        DS=DeltaS(m0,lamb0,phi,i1,i2,phi2)
         !DS=DeltaS2(m0,phi,i1,i2,phi2)
         if(DS .le. 0._dp) then
           phi(i1,i2)=phi2
@@ -60,8 +60,8 @@ contains
     AR=AR/real(N**2,dp)
   end subroutine montecarlo
 
-  subroutine metropolis(m0,phi)
-    real(dp), intent(in) :: m0
+  subroutine metropolis(m0,lamb0,phi)
+    real(dp), intent(in) :: m0,lamb0
     real(dp), dimension(N,N), intent(inout) :: phi
     real(dp) :: deltaphi,phi2,DS,r,p
     integer(i4) :: i1,i2
@@ -69,7 +69,7 @@ contains
       do i2=1,N
         call random_phi(deltaphi,dphi_m)
         phi2=phi(i1,i2)+deltaphi
-        DS=DeltaS(m0,phi,i1,i2,phi2)
+        DS=DeltaS(m0,lamb0,phi,i1,i2,phi2)
         if(DS .le. 0._dp) then
           phi(i1,i2)=phi2
         else
@@ -193,13 +193,13 @@ contains
     
   end subroutine cluster
   
-  subroutine cycles(m0,phi,k)
-    real(dp), intent(in) :: m0
+  subroutine cycles(m0,lamb0,phi,k)
+    real(dp), intent(in) :: m0,lamb0
     real(dp), dimension(N,N), intent(inout) :: phi
     integer(i4), intent(in) :: k
     integer(i4) :: i
     do i=1,k
-      call metropolis(m0,phi)
+      call metropolis(m0,lamb0,phi)
     end do
     call cluster(phi)
   end subroutine cycles

@@ -12,27 +12,28 @@ contains
     real(dp), dimension(N), intent(inout) :: corr1
     real(dp), dimension(N,N), intent(inout) :: corr2
     real(dp), dimension(N) :: varphi
-    real(dp) :: meanabs
+    real(dp) :: xx
     integer(i4) :: i1,i2
     varphi=0._dp
-    meanabs=mean(phi)/real(N**2,dp)
+    xx=abs(mean(phi))/real(N**2,dp)
     do i1=1,N
-      !do i2=1,N
-        varphi(i1)=varphi(i1)+phi(i1,1)
-      !end do
+      do i2=1,N
+        varphi(i1)=varphi(i1)+phi(i1,i2)
+      end do
     end do
     varphi(:)=varphi(:)/real(N,dp)
     do i1=1,N
-      corr1(i1)=corr1(i1)+meanabs
+      corr1(i1)=corr1(i1)+xx
       do i2=1,N
-        corr2(i1,i2)=corr2(i1,i2)+varphi(i1)*varphi(i2)
+        corr2(i1,i2)=corr2(i1,i2)+(varphi(i1)*varphi(i2))
+        !corr2(i1,i2)=corr2(i1,i2)+(phi(i1,1)*phi(i2,1))
       end do
     end do
   end subroutine correlation
   
-  subroutine autocorrelation(m0,tmax,phi,montecarlos)
+  subroutine autocorrelation(m0,lamb0,tmax,phi,montecarlos)
     integer(i4), intent(in) :: tmax,montecarlos
-    real(dp), intent(in) :: m0
+    real(dp), intent(in) :: m0,lamb0
     real(dp), dimension(N,N), intent(inout) :: phi
     real(dp), dimension(tmax+1) :: auto,auto_delta
     real(dp) :: E(Nmsrs+tmax), auto1(Nmsrs)
@@ -45,8 +46,8 @@ contains
     print*, 'File created at:', filename
     do j=1,Nauto
       do i=1,Nmsrs+tmax
-        call cycles(m0,phi,montecarlos)
-        !E(i)=S(m0,phi)/(real(N,dp)**2)
+        call cycles(m0,lamb0,phi,montecarlos)
+        !E(i)=S(m0,lamb0,phi)/(real(N,dp)**2)
         E(i)=abs(mean(phi))/(real(N,dp)**2)
       end do
       call mean_0(E,E_ave )
