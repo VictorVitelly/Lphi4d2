@@ -5,11 +5,11 @@ module parameters
 
     !integer(i4), parameter :: N=8,thermalization=1300,eachsweep=80
     !integer(i4), parameter :: N=8,thermalization=1300,eachsweep=27
-    integer(i4), parameter :: N=16,thermalization=1800,eachsweep=36
-    !integer(i4), parameter :: N=32,thermalization=2300,eachsweep=45
+    !integer(i4), parameter :: N=16,thermalization=1800,eachsweep=36
+    integer(i4), parameter :: N=32,thermalization=2300,eachsweep=45
     !integer(i4), parameter :: N=64,thermalization=2700,eachsweep=55
     !integer(i4), parameter :: N=128,thermalization=3000,eachsweep=60
-    integer(i4), parameter :: Nmsrs=1, Nmsrs2=120000
+    integer(i4), parameter :: Nmsrs=100, Nmsrs2=120
     integer(i4) :: sweeps=thermalization+eachsweep*Nmsrs
     integer(i4), parameter :: bins=101,Nauto=150000,Mbin(5)=(/4,5,10,15,20/)
     !integer(i4),parameter :: Mbin(3)=(/5,10,15/)!

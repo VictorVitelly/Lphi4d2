@@ -12,18 +12,18 @@ contains
     real(dp), dimension(N), intent(inout) :: corr1
     real(dp), dimension(N,N), intent(inout) :: corr2
     real(dp), dimension(N) :: varphi
-    real(dp) :: meanabs
+    real(dp) :: xx
     integer(i4) :: i1,i2
     varphi=0._dp
-    meanabs=mean(phi)/real(N**2,dp)
+    xx=abs(mean(phi))/real(N**2,dp)
     do i1=1,N
-      !do i2=1,N
-        varphi(i1)=varphi(i1)+phi(i1,1)
-      !end do
+      do i2=1,N
+        varphi(i1)=varphi(i1)+phi(i1,i2)
+      end do
     end do
     varphi(:)=varphi(:)/real(N,dp)
     do i1=1,N
-      corr1(i1)=corr1(i1)+meanabs
+      corr1(i1)=corr1(i1)+xx
       do i2=1,N
         corr2(i1,i2)=corr2(i1,i2)+varphi(i1)*varphi(i2)
       end do

@@ -32,7 +32,7 @@ program main
   !call vary_m0(-1.4_dp,-1.0_dp,11)  
   
   !Measure correlation function
-  call correlate(-1.6_dp,-1.0_dp,20)
+  call correlate(-0.15_dp,-0.45_dp,16)
 
   call cpu_time(ending)
   write(*,*) "Elapsed time: ", (ending-starting), " s"
